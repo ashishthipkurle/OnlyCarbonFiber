@@ -9,6 +9,7 @@ import { Link } from "react-router";
 import { ArrowDown, Star, Instagram } from "lucide-react";
 import { SEO } from "../components/common/SEO";
 import { LazyImage } from "../components/common/LazyImage";
+import heroImage from "../../assets/1.jpg";
 
 export function Home() {
   const heroRef = useRef<HTMLDivElement>(null);
@@ -65,7 +66,7 @@ export function Home() {
       <section ref={heroRef} className="relative flex items-start pt-[140px] pb-[80px] overflow-hidden bg-[#1A1A1A] text-white">
         <div className="absolute inset-0 z-0">
           <LazyImage
-            src="https://images.unsplash.com/photo-1637004732258-4b792ce8f474?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxibGFjayUyMGNhcmJvbiUyMGZpYmVyJTIwdGV4dHVyZXxlbnwxfHx8fDE3ODA2ODE0NDN8MA&ixlib=rb-4.1.0&q=80&w=1080"
+            src={heroImage}
             alt="Carbon Fiber Texture"
             className="hero-img w-full h-full object-cover opacity-40 mix-blend-overlay"
           />

@@ -5,10 +5,11 @@ import { useGSAP } from "@gsap/react";
 import { Button } from "../components/ui/UI";
 import { MapPin, Check, CreditCard, ArrowRight, ShieldCheck } from "lucide-react";
 import { useCartStore } from "../store/cartStore";
-import { initializePayment, createRazorpayOrder } from "../services/razorpay";
+import { initializePayment, createRazorpayOrder, verifyRazorpayPayment } from "../services/razorpay";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { useAuthStore } from "../store/authStore";
 
 const checkoutSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -88,10 +89,45 @@ export function Checkout() {
             contact: formData.phone,
           },
         },
-        (response) => {
-          clearCart();
-          navigate(`/order-success?id=${orderId}&payment_id=${response.razorpay_payment_id}`);
-        },
+        (async (response) => {
+          try {
+            setIsProcessing(true);
+            const { user } = useAuthStore.getState();
+            await verifyRazorpayPayment(
+              response.razorpay_order_id,
+              response.razorpay_payment_id,
+              response.razorpay_signature,
+              {
+                user_id: user?.id,
+                total_amount: total,
+                shipping_address: {
+                  firstName: formData.firstName,
+                  lastName: formData.lastName,
+                  address: formData.address,
+                  city: formData.city,
+                  state: formData.state,
+                  pincode: formData.pincode
+                },
+                contact_info: {
+                  email: formData.email,
+                  phone: formData.phone
+                },
+                items: items.map(item => ({
+                  product_id: item.product.id,
+                  quantity: item.quantity,
+                  price: item.product.price
+                }))
+              }
+            );
+            clearCart();
+            setIsProcessing(false);
+            navigate(`/order-success?id=${orderId}&payment_id=${response.razorpay_payment_id}`);
+          } catch (err) {
+            console.error("Payment verification failed:", err);
+            alert("Payment verification failed. Please contact support.");
+            setIsProcessing(false);
+          }
+        }),
         (error) => {
           console.error("Payment failed:", error);
           alert("Payment failed or was cancelled.");

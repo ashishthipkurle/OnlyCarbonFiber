@@ -5,32 +5,12 @@ import { Package, ChevronDown, CheckCircle2, Clock, Download } from "lucide-reac
 import { useAuthStore } from "../store/authStore";
 import { supabase } from "../services/supabase";
 
-const MOCK_ORDERS = [
-  {
-    id: "OCF-8492-X9",
-    date: "12 May 2026",
-    status: "processing",
-    total: 14158,
-    items: [
-      { name: "Minimalist Cardholder", qty: 1, price: 4999 },
-      { name: "iPhone 15 Pro Case", qty: 2, price: 3499 }
-    ]
-  },
-  {
-    id: "OCF-7731-M2",
-    date: "04 Mar 2026",
-    status: "delivered",
-    total: 45000,
-    items: [
-      { name: "BMW M3 G80 Rear Spoiler", qty: 1, price: 45000 }
-    ]
-  }
-];
+
 
 export function Orders() {
   const [activeTab, setActiveTab] = useState("all");
   const { user, isAuthenticated } = useAuthStore();
-  const [orders, setOrders] = useState<any[]>(MOCK_ORDERS);
+  const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -62,7 +42,7 @@ export function Orders() {
         }
       } catch (err) {
         console.error("Error fetching orders:", err);
-        // Fallback to mock data already set in state
+        setOrders([]);
       } finally {
         setLoading(false);
       }

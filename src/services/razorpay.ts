@@ -57,11 +57,42 @@ export const initializePayment = (
   }
 };
 
-// Mock function to create order on backend
+import { supabase } from './supabase';
+
 export const createRazorpayOrder = async (amount: number): Promise<string> => {
-  // In a real app, this would call your Supabase Edge Function
-  // return await fetch('/api/create-order', ...).then(r => r.json()).then(data => data.id);
-  
-  // Returning a fake order ID for now
-  return `order_${Math.random().toString(36).substr(2, 9)}`;
+  try {
+    const { data, error } = await supabase.functions.invoke('create-razorpay-order', {
+      body: { amount, currency: 'INR' },
+    });
+
+    if (error) throw error;
+    return data.id; // Razorpay order ID
+  } catch (error) {
+    console.error('Error creating Razorpay order:', error);
+    throw error;
+  }
+};
+
+export const verifyRazorpayPayment = async (
+  razorpay_order_id: string,
+  razorpay_payment_id: string,
+  razorpay_signature: string,
+  orderDetails: any
+): Promise<any> => {
+  try {
+    const { data, error } = await supabase.functions.invoke('verify-razorpay-payment', {
+      body: { 
+        razorpay_order_id, 
+        razorpay_payment_id, 
+        razorpay_signature,
+        orderDetails
+      },
+    });
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error verifying Razorpay payment:', error);
+    throw error;
+  }
 };

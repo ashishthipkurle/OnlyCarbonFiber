@@ -4,7 +4,7 @@ import { useGSAP } from "@gsap/react";
 import { SectionReveal, AnimatedText, Marquee, CounterNumber } from "../components/ui/GSAPWrappers";
 import { Button } from "../components/ui/UI";
 import { ProductCard } from "../components/ui/ProductCard";
-import { PRODUCTS } from "../utils/mockData";
+import { useProductStore } from "../store/productStore";
 import { Link } from "react-router";
 import { ArrowDown, Star, Instagram } from "lucide-react";
 import { SEO } from "../components/common/SEO";
@@ -14,6 +14,13 @@ import heroImage from "../../assets/1.jpg";
 export function Home() {
   const heroRef = useRef<HTMLDivElement>(null);
   const processRef = useRef<HTMLDivElement>(null);
+  const { products, fetchProducts } = useProductStore();
+
+  React.useEffect(() => {
+    if (products.length === 0) {
+      fetchProducts();
+    }
+  }, [fetchProducts, products.length]);
 
   // Hero staggered entrance
   useGSAP(() => {
@@ -186,7 +193,7 @@ export function Home() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {PRODUCTS.slice(0, 4).map(product => (
+            {products.slice(0, 4).map(product => (
               <ProductCard key={product.id} {...product} />
             ))}
           </div>

@@ -3,6 +3,29 @@
 -- Enable UUID extension
 create extension if not exists "uuid-ossp";
 
+-- Profiles Table (Extended user data)
+create table public.profiles (
+  id uuid references auth.users(id) on delete cascade primary key,
+  full_name text,
+  phone text,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- Trigger to automatically create a profile on signup
+create or replace function public.handle_new_user()
+returns trigger as $$
+begin
+  insert into public.profiles (id, full_name)
+  values (new.id, new.raw_user_meta_data->>'full_name');
+  return new;
+end;
+$$ language plpgsql security definer;
+
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute procedure public.handle_new_user();
+
 -- Products Table
 create table public.products (
   id uuid primary key default uuid_generate_v4(),
@@ -50,13 +73,48 @@ create table public.wishlists (
   unique(user_id, product_id)
 );
 
+-- Reviews Table
+create table public.reviews (
+  id uuid primary key default uuid_generate_v4(),
+  product_id uuid references public.products(id) on delete cascade not null,
+  user_id uuid references auth.users(id) on delete cascade not null,
+  rating integer check (rating >= 1 and rating <= 5) not null,
+  comment text,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
 -- Row Level Security (RLS) setup
+alter table public.profiles enable row level security;
+alter table public.reviews enable row level security;
 alter table public.products enable row level security;
 alter table public.orders enable row level security;
 alter table public.order_items enable row level security;
 alter table public.wishlists enable row level security;
 
 -- Policies
+
+-- Profiles: Users can read and update their own profile
+create policy "Users can view their own profile"
+on public.profiles for select
+to authenticated
+using (auth.uid() = id);
+
+create policy "Users can update their own profile"
+on public.profiles for update
+to authenticated
+using (auth.uid() = id);
+
+-- Reviews: Anyone can read, authenticated can insert
+create policy "Reviews are viewable by everyone"
+on public.reviews for select
+to public
+using (true);
+
+create policy "Authenticated users can create reviews"
+on public.reviews for insert
+to authenticated
+with check (auth.uid() = user_id);
 
 -- Products: Anyone can read products. Only admins (need a role/flag, but for now nobody) can modify.
 create policy "Products are viewable by everyone" 
@@ -90,10 +148,4 @@ with check (
   order_id in (select id from public.orders where user_id = auth.uid())
 );
 
--- Seed Data (Matches MockData)
-insert into public.products (name, category, price, image, description, specs) values
-('Minimalist Cardholder', 'Accessories', 4999, 'https://images.unsplash.com/photo-1627123424574-724758594e93?auto=format&fit=crop&q=80&w=800', 'Forged carbon fiber cardholder that blocks RFID and holds up to 8 cards with an ultra-slim profile. Aerospace-grade durability meets minimalist design.', ARRAY['Weight: 14g', 'Capacity: 8 Cards', 'Material: Forged Carbon', 'Feature: RFID Blocking']),
-('iPhone 15 Pro Case', 'Tech', 3499, 'https://images.unsplash.com/photo-1603313011101-320f26a4f6f6?auto=format&fit=crop&q=80&w=800', 'Precision engineered 3K twill carbon fiber case. MagSafe compatible with raised bezels for maximum protection and zero signal interference.', ARRAY['Weight: 12g', 'Thickness: 0.6mm', 'Material: 3K Twill Carbon', 'Feature: MagSafe Compatible']),
-('BMW M3 G80 Rear Spoiler', 'Auto', 45000, 'https://images.unsplash.com/photo-1603584173870-7f23fdae1b7a?auto=format&fit=crop&q=80&w=800', 'Aerodynamically optimized, autoclave-cured prepreg carbon fiber rear spoiler. Generates 45lbs of downforce at 120mph.', ARRAY['Weight: 1.2kg', 'Downforce: 45lbs @ 120mph', 'Material: Prepreg Carbon', 'Finish: Gloss UV Clearcoat']),
-('MacBook Pro 16" Shell', 'Tech', 8999, 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&q=80&w=800', 'Ultra-thin, snap-on carbon fiber shell providing extreme rigidity and scratch resistance without adding bulk.', ARRAY['Weight: 98g', 'Thickness: 0.8mm', 'Material: Forged Carbon', 'Feature: Vented Design']),
-('Key Organizer', 'Accessories', 2499, 'https://images.unsplash.com/photo-1581605405669-fcdf81165afa?auto=format&fit=crop&q=80&w=800', 'Silent, compact key organizer made from matte finish carbon fiber. Eliminates key jingle and pocket bulk.', ARRAY['Weight: 18g', 'Capacity: 2-7 Keys', 'Material: Matte Carbon', 'Feature: Anti-Loosening Washers']);
+-- Seed data has been moved to supabase/seed.sql

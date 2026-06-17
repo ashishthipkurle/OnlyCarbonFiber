@@ -3,7 +3,7 @@ import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { SectionReveal } from "../components/ui/GSAPWrappers";
 import { ProductCard } from "../components/ui/ProductCard";
-import { PRODUCTS } from "../utils/mockData";
+
 import { SlidersHorizontal, ChevronDown, X } from "lucide-react";
 import { useProductStore } from "../store/productStore";
 import { SEO } from "../components/common/SEO";
@@ -17,7 +17,13 @@ export function Marketplace() {
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
   const mobileFilterRef = useRef<HTMLDivElement>(null);
   
-  const { filters, sortBy, setFilter, setSortBy, clearFilters } = useProductStore();
+  const { products, isLoading, error, fetchProducts, filters, sortBy, setFilter, setSortBy, clearFilters } = useProductStore();
+
+  React.useEffect(() => {
+    if (products.length === 0) {
+      fetchProducts();
+    }
+  }, [fetchProducts, products.length]);
 
   // GSAP Tab Pill sliding animation
   useGSAP(() => {
@@ -57,7 +63,7 @@ export function Marketplace() {
 
   // Derive filtered and sorted products
   const displayProducts = React.useMemo(() => {
-    let result = [...PRODUCTS];
+    let result = [...products];
     
     if (filters.category !== 'All') {
       result = result.filter(p => p.category === filters.category);
@@ -68,7 +74,7 @@ export function Marketplace() {
     if (sortBy === 'price-desc') result.sort((a, b) => b.price - a.price);
     
     return result;
-  }, [filters, sortBy]);
+  }, [filters, sortBy, products]);
 
   return (
     <div className="pt-[100px] pb-24 min-h-screen bg-white">
@@ -144,7 +150,11 @@ export function Marketplace() {
               )}
             </div>
 
-            {displayProducts.length > 0 ? (
+            {isLoading ? (
+              <div className="py-20 text-center text-[#6B6B6B] font-['Jost']">Loading products...</div>
+            ) : error ? (
+              <div className="py-20 text-center text-red-500 font-['Jost']">Error: {error}</div>
+            ) : displayProducts.length > 0 ? (
               <SectionReveal>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                   {displayProducts.map((product) => (
